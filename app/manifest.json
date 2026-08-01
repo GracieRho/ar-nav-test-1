@@ -1,0 +1,9 @@
+{
+  "name": "세브란스 길동무",
+  "short_name": "길동무",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fb",
+  "theme_color": "#005eb8",
+  "lang": "ko"
+}

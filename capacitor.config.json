@@ -1,0 +1,6 @@
+{
+  "appId": "kr.ac.yuhs.indoorNavigation",
+  "appName": "세브란스 길동무",
+  "webDir": "app",
+  "server": { "androidScheme": "https" }
+}

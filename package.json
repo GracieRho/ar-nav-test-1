@@ -1,0 +1,12 @@
+{
+  "name": "severance-indoor-navigation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server/index.js",
+    "start": "node server/index.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" }
+}
