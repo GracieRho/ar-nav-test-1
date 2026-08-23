@@ -1,9 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const loadJson = (relativePath) =>
-  JSON.parse(
-    readFileSync(new URL(relativePath, import.meta.url), "utf8")
-  );
+  JSON.parse(readFileSync(new URL(relativePath, import.meta.url), "utf8"));
 
 const rawNodes = loadJson("../data/nodes.json");
 const rawEdges = loadJson("../data/edges.json");
@@ -16,23 +14,28 @@ const nodes = rawNodes.map((node) => ({
   floorId: floorId(node.floor),
   floor: node.floor,
 
-  // 길찾기 계산용 공통 좌표
+  // 최단경로 계산용 1F~6F 공통 좌표
   x: node.x,
   y: node.z,
 
-  // 2D 평면도 표시/클릭 보정용 좌표
+  // 평면도/3D 안내 화면용 층 로컬 좌표
   localX: node.local_x,
   localY: node.local_z,
   sourceMapX: node.source_map_x ?? null,
   sourceMapY: node.source_map_y ?? null,
 
   type: node.role,
+  connectorType: node.connector_type ?? null,
+  connectorName: node.name ?? null,
+
   name: {
-    ko: node.note || `${node.floor}층 ${node.id}`,
+    ko: node.name || node.note || `${node.floor}층 ${node.id}`,
     en: node.id,
   },
+
   confidence: node.confidence,
   provenance: node.provenance,
+  note: node.note,
 }));
 
 const edges = rawEdges.map((edge) => ({
@@ -41,14 +44,10 @@ const edges = rawEdges.map((edge) => ({
   to: edge.to,
   type: edge.type,
 
-  accessible: [
-    "walk",
-    "connector_access",
-    "elevator"
-  ].includes(edge.type),
-
+  accessible: ["walk", "connector_access", "elevator"].includes(edge.type),
   oneWay: edge.bidirectional === false,
 
+  // 현재 데이터는 실제 m가 아니라 프로토타입용 가중치임.
   lengthMeters:
     typeof edge.routing_cost_estimate === "number"
       ? edge.routing_cost_estimate
@@ -68,16 +67,14 @@ const pois = rawPois.map((poi) => ({
   floorId: floorId(poi.floor),
   floor: poi.floor,
   category: poi.category,
+
   name: {
     ko: poi.name,
     en: poi.name,
   },
 
-  // 길찾기 계산용 공통 좌표
   x: poi.x,
   y: poi.z,
-
-  // 추후 지도 POI 마커 표시용 좌표
   localX: poi.local_x,
   localY: poi.local_z,
 
@@ -90,7 +87,7 @@ export const campus = {
   id: "severance-sinchon",
   name: {
     ko: "세브란스병원",
-    en: "Severance Hospital"
+    en: "Severance Hospital",
   },
 
   buildings: [
@@ -98,9 +95,9 @@ export const campus = {
       id: "main",
       name: {
         ko: "본관",
-        en: "Main Building"
-      }
-    }
+        en: "Main Building",
+      },
+    },
   ],
 
   floors: Array.from({ length: 6 }, (_, index) => {
@@ -111,32 +108,29 @@ export const campus = {
       level,
       name: {
         ko: `본관 ${level}층`,
-        en: `Main Building ${level}F`
-      }
+        en: `Main Building ${level}F`,
+      },
     };
   }),
 
   nodes,
   edges,
   pois,
-  beacons: []
+  beacons: [],
 };
 
 export function publicConfig() {
   return {
     campusId: campus.id,
-    dataMode: "prototype-1f-6f",
-    positionProviders: [
-      "native-ble",
-      "qr",
-      "simulator"
-    ],
+    dataMode: "prototype-1f-6f-3d-guidance",
+    positionProviders: ["native-ble", "qr", "simulator"],
     defaultLocale: "ko",
     features: {
       cameraHud: true,
       spatialAr: false,
+      local3dGuidance: true,
       voice: true,
-      multiFloorRouting: true
-    }
+      multiFloorRouting: true,
+    },
   };
 }
