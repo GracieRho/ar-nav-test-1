@@ -318,42 +318,26 @@ async function showHome() {
           <strong>이동 방법을 선택해주세요</strong>
         </div>
 
-        <p class="helper-text">
-          에스컬레이터 이용이 어려운 경우 층간 이동은 엘리베이터만 사용하도록 안내합니다.
-        </p>
+        <div class="mobility-toggle" role="group" aria-label="이동 방법 선택">
+          <button
+            type="button"
+            class="mobility-button ${state.canUseEscalator ? "active" : ""}"
+            data-mobility="yes"
+            aria-pressed="${state.canUseEscalator}"
+          >
+            <span class="mobility-emoji">↗</span>
+            <span>에스컬레이터 가능</span>
+          </button>
 
-        <div class="mobility-options">
-          <label class="mobility-option ${
-            state.canUseEscalator ? "active" : ""
-          }">
-            <input
-              type="radio"
-              name="escalator"
-              value="yes"
-              ${state.canUseEscalator ? "checked" : ""}
-            >
-            <span class="mobility-icon">↗</span>
-            <span>
-              <strong>에스컬레이터 이용 가능</strong>
-              <small>엘리베이터와 에스컬레이터를 모두 이용할 수 있어요</small>
-            </span>
-          </label>
-
-          <label class="mobility-option ${
-            !state.canUseEscalator ? "active" : ""
-          }">
-            <input
-              type="radio"
-              name="escalator"
-              value="no"
-              ${!state.canUseEscalator ? "checked" : ""}
-            >
-            <span class="mobility-icon">♿</span>
-            <span>
-              <strong>에스컬레이터 이용 어려움</strong>
-              <small>층간 이동은 엘리베이터만 이용하도록 안내해요</small>
-            </span>
-          </label>
+          <button
+            type="button"
+            class="mobility-button ${!state.canUseEscalator ? "active" : ""}"
+            data-mobility="no"
+            aria-pressed="${!state.canUseEscalator}"
+          >
+            <span class="mobility-emoji">♿</span>
+            <span>엘리베이터만</span>
+          </button>
         </div>
       </div>
 
@@ -405,19 +389,19 @@ async function showHome() {
           <strong>어디로 가시나요?</strong>
         </div>
 
-        <div class="destination-search">
-          <span>🔍</span>
+        <div class="destination-search large-search">
+          <span class="search-icon">🔍</span>
           <input
             type="search"
             id="destination-search"
-            placeholder="진료과, 검사실, 편의시설 검색"
+            placeholder="목적지를 검색하세요"
             autocomplete="off"
             value="${escapeHtml(state.destinationSearch)}"
           >
         </div>
 
         <div class="destination-divider">
-          검색하거나 층별로 살펴보세요. 검색어는 층을 바꿔도 유지됩니다.
+          또는 층별로 보기
         </div>
 
         <div class="floor-picker" id="destination-floor-picker">
@@ -458,15 +442,16 @@ async function showHome() {
     </section>
   `;
 
-  // 이동 방법
-  document.querySelectorAll('input[name="escalator"]').forEach((input) => {
-    input.addEventListener("change", (event) => {
-      state.canUseEscalator = event.target.value === "yes";
+  // 이동 방법 - 큰 버튼 두 개 중 하나를 선택
+  document.querySelectorAll(".mobility-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.canUseEscalator = button.dataset.mobility === "yes";
 
-      document
-        .querySelectorAll(".mobility-option")
-        .forEach((item) => item.classList.remove("active"));
-      event.target.closest(".mobility-option")?.classList.add("active");
+      document.querySelectorAll(".mobility-button").forEach((item) => {
+        const active = item === button;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-pressed", String(active));
+      });
     });
   });
 
