@@ -2,18 +2,47 @@ function distance(a, b) {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
-export function findRoute(campus, startNodeId, destinationNodeId, options = {}) {
+export function findRoute(
+  campus,
+  startNodeId,
+  destinationNodeId,
+  options = {}
+) {
   const nodes = new Map(campus.nodes.map((node) => [node.id, node]));
+
   if (!nodes.has(startNodeId) || !nodes.has(destinationNodeId)) {
     throw new Error("Unknown start or destination node");
   }
 
   const adjacency = new Map(campus.nodes.map((node) => [node.id, []]));
+
   for (const edge of campus.edges) {
+    // 휠체어 모드: 접근 불가 edge 제거
     if (options.wheelchair && !edge.accessible) continue;
-    const weight = edge.lengthMeters ?? distance(nodes.get(edge.from), nodes.get(edge.to));
-    adjacency.get(edge.from).push({ nodeId: edge.to, edge, weight });
-    if (!edge.oneWay) adjacency.get(edge.to).push({ nodeId: edge.from, edge, weight });
+
+    // 환자용 기본 설정에서는 계단을 길찾기 후보에서 제외한다.
+    if (options.allowStairs === false && edge.type === "stair") continue;
+
+    // 에스컬레이터 이용이 어려운 경우 에스컬레이터를 제외한다.
+    // allowStairs=false도 함께 보내므로 이 경우 층간 이동은 엘리베이터만 남는다.
+    if (options.avoidEscalator && edge.type === "escalator") continue;
+
+    const weight =
+      edge.lengthMeters ?? distance(nodes.get(edge.from), nodes.get(edge.to));
+
+    adjacency.get(edge.from).push({
+      nodeId: edge.to,
+      edge,
+      weight,
+    });
+
+    if (!edge.oneWay) {
+      adjacency.get(edge.to).push({
+        nodeId: edge.from,
+        edge,
+        weight,
+      });
+    }
   }
 
   const distances = new Map([[startNodeId, 0]]);
@@ -37,7 +66,9 @@ export function findRoute(campus, startNodeId, destinationNodeId, options = {}) 
 
     for (const neighbor of adjacency.get(current)) {
       if (!unvisited.has(neighbor.nodeId)) continue;
+
       const candidate = best + neighbor.weight;
+
       if (candidate < (distances.get(neighbor.nodeId) ?? Infinity)) {
         distances.set(neighbor.nodeId, candidate);
         previous.set(neighbor.nodeId, {
@@ -54,7 +85,12 @@ export function findRoute(campus, startNodeId, destinationNodeId, options = {}) 
 
   const nodeIds = [];
   const edgeIds = [];
-  for (let cursor = destinationNodeId; cursor; cursor = previous.get(cursor)?.nodeId) {
+
+  for (
+    let cursor = destinationNodeId;
+    cursor;
+    cursor = previous.get(cursor)?.nodeId
+  ) {
     nodeIds.unshift(cursor);
     const edgeId = previous.get(cursor)?.edgeId;
     if (edgeId) edgeIds.unshift(edgeId);
@@ -66,7 +102,6 @@ export function findRoute(campus, startNodeId, destinationNodeId, options = {}) 
     destinationNodeId,
     nodeIds,
     edgeIds,
-    // 아직 실측 m가 아니므로 UI에서는 거리 수치를 노출하지 않는다.
     distanceMeters: Math.round(distances.get(destinationNodeId)),
     maneuvers: createManeuvers(nodeIds.map((id) => nodes.get(id))),
   };
@@ -109,9 +144,9 @@ function createManeuvers(nodes) {
     const previous = nodes[index - 1];
     const next = nodes[index + 1];
 
-    // 현재 지점 다음에 층이 바뀌면 층간 이동 안내를 우선한다.
     if (next.floor !== node.floor) {
       const transport = connectorKo(node.connectorType ? node : next);
+
       return {
         nodeId: node.id,
         floor: node.floor,
@@ -126,7 +161,6 @@ function createManeuvers(nodes) {
       };
     }
 
-    // 층 이동 직후에는 새 층에서 다시 진행 방향을 안내한다.
     if (previous.floor !== node.floor) {
       return {
         nodeId: node.id,
@@ -143,7 +177,11 @@ function createManeuvers(nodes) {
     const a = previous;
     const b = node;
     const c = next;
-    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+
+    const cross =
+      (b.x - a.x) * (c.y - b.y) -
+      (b.y - a.y) * (c.x - b.x);
+
     const action =
       Math.abs(cross) < 0.01
         ? "CONTINUE"
