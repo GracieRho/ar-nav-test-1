@@ -79,6 +79,18 @@ export function findRoute(
     const fromNode = nodes.get(edge.from);
     const toNode = nodes.get(edge.to);
 
+    const isEscalator =
+      edge.type === "escalator" ||
+      fromNode.connectorType === "escalator" ||
+      toNode.connectorType === "escalator";
+    
+    if (
+      options.avoidEscalator &&
+      isEscalator
+    ) {
+      continue;
+    }
+
     // 잘못된 edge 데이터 방어
     if (!fromNode || !toNode) {
       console.warn(
